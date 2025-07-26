@@ -1,0 +1,9 @@
+modLoader="javafml"
+loaderVersion="[47,)" # Pour Forge 1.20.1
+license="MIT"
+
+[[mods]]
+modId="adminmenuscorp"
+version="1.0.0"
+displayName="Admin Menu Scorp"
+description="Admin menu to view inventory and logs"
