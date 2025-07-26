@@ -10,31 +10,93 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Manages floating panels in the admin menu interface.
+ * Handles panel initialization, rendering, and mouse interactions.
+ */
 public class PanelManager {
+    // Panel dimensions and positioning constants
+    private static final int PANEL_WIDTH = 200;
+    private static final int PANEL_HEIGHT = 200;
+    private static final int PANEL_SPACING = 220;
+    private static final int BUTTON_WIDTH = 120;
+    private static final int BUTTON_HEIGHT = 20;
+    private static final int BUTTON_SPACING = 25;
+    private static final int SUB_PANEL_WIDTH = 160;
+    private static final int SUB_PANEL_HEIGHT = 140;
+
+    // Player names - could be made configurable
+    private static final String PLAYER_NAME = "Player1";
+
     public static final List<FloatingPanel> panels = new ArrayList<>();
 
+    /**
+     * Initializes all floating panels with their respective components.
+     * Clears existing panels and creates new ones for inventory, logs, and settings.
+     */
     public static void initPanels() {
         panels.clear();
 
-        FloatingPanel invPanel = new FloatingPanel("InV", 10, 10, 200, 200);
-        FloatingPanel logsPanel = new FloatingPanel("Logs", 230, 10, 200, 200);
-        FloatingPanel settingsPanel = new FloatingPanel("Settings", 460, 10, 200, 200);
+        // Create main panels
+        FloatingPanel inventoryPanel = createInventoryPanel();
+        FloatingPanel logsPanel = createLogsPanel();
+        FloatingPanel settingsPanel = createSettingsPanel();
 
-        Button playerButton = Button.builder(Component.literal("Player1"), b -> {
-            FloatingPanel subPanel = new FloatingPanel("Player-Name 1", 400, 100, 160, 140);
-            subPanel.addButton(Button.builder(Component.literal("Inventory"), bb -> Minecraft.getInstance().player.connection.sendCommand("/view inv Player1")).pos(0, 0).size(120, 20).build());
-            subPanel.addButton(Button.builder(Component.literal("Ender Chest"), bb -> Minecraft.getInstance().player.connection.sendCommand("/view echest Player1")).pos(0, 25).size(120, 20).build());
-            subPanel.addButton(Button.builder(Component.literal("Backpack"), bb -> Minecraft.getInstance().player.connection.sendCommand("/view backpack Player1")).pos(0, 50).size(120, 20).build());
-            subPanel.addButton(Button.builder(Component.literal("Curios"), bb -> Minecraft.getInstance().player.connection.sendCommand("/view curios Player1")).pos(0, 75).size(120, 20).build());
-            subPanel.addButton(Button.builder(Component.literal("CuriosCosmetic"), bb -> Minecraft.getInstance().player.connection.sendCommand("/view curioscosmetic Player1")).pos(0, 100).size(120, 20).build());
-            panels.add(subPanel);
-        }).pos(10, 35).size(120, 20).build();
-        invPanel.addButton(playerButton);
+        // Add panels to the manager
+        panels.add(inventoryPanel);
+        panels.add(logsPanel);
+        panels.add(settingsPanel);
+    }
 
-        Button logButton = Button.builder(Component.literal("Log Entry"), b -> {}).pos(10, 35).size(120, 20).build();
-        logsPanel.addButton(logButton);
+    /**
+     * Creates the inventory panel with player management buttons.
+     */
+    private static FloatingPanel createInventoryPanel() {
+        FloatingPanel panel = new FloatingPanel("InV", 10, 10, PANEL_WIDTH, PANEL_HEIGHT);
 
-        AbstractSliderButton scaleSlider = new AbstractSliderButton(20, 40, 140, 20, Component.literal("Scale"), HeadMenu.getScale()) {
+        Button playerButton = createPlayerButton();
+        panel.addButton(playerButton);
+
+        return panel;
+    }
+
+    /**
+     * Creates the logs panel with log entry functionality.
+     */
+    private static FloatingPanel createLogsPanel() {
+        FloatingPanel panel = new FloatingPanel("Logs", 10 + PANEL_SPACING, 10, PANEL_WIDTH, PANEL_HEIGHT);
+
+        // Create button with relative position (relative to panel origin)
+        int buttonX = (PANEL_WIDTH - BUTTON_WIDTH) / 2; // Centered horizontally within panel
+        int buttonY = 35; // Positioned vertically within panel
+
+        Button logButton = Button.builder(
+                        Component.literal("Log Entry"),
+                        b -> { /* TODO: Implement log entry functionality */ }
+                )
+                .pos(buttonX, buttonY)
+                .size(BUTTON_WIDTH, BUTTON_HEIGHT)
+                .build();
+
+        panel.addButton(logButton);
+        return panel;
+    }
+
+    /**
+     * Creates the settings panel with configuration options.
+     */
+    private static FloatingPanel createSettingsPanel() {
+        int panelX = 10 + (PANEL_SPACING * 2);
+        int panelY = 10;
+        FloatingPanel panel = new FloatingPanel("Settings", panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT);
+
+        // Create slider with relative position (relative to panel origin)
+        int sliderWidth = 140;
+        int sliderHeight = 20;
+        int relativeX = (PANEL_WIDTH - sliderWidth) / 2; // Centered horizontally within panel
+        int relativeY = 35; // Positioned vertically within panel
+
+        AbstractSliderButton scaleSlider = new AbstractSliderButton(relativeX, relativeY, sliderWidth, sliderHeight, Component.literal("Scale"), HeadMenu.getScale()) {
             @Override
             protected void updateMessage() {
                 setMessage(Component.literal("Scale: " + String.format("%.2f", value)));
@@ -47,12 +109,74 @@ public class PanelManager {
                 SettingsStorage.setScale((float) value);
             }
         };
-        settingsPanel.addWidget(scaleSlider);
 
-        panels.add(invPanel);
-        panels.add(logsPanel);
-        panels.add(settingsPanel);
+        panel.addWidget(scaleSlider);
+
+        return panel;
     }
+
+    /**
+     * Creates a button that opens a player management sub-panel.
+     */
+    private static Button createPlayerButton() {
+        // Create button with relative position (relative to panel origin)
+        int buttonX = (PANEL_WIDTH - BUTTON_WIDTH) / 2; // Centered horizontally within panel
+        int buttonY = 35; // Positioned vertically within panel
+
+        return Button.builder(
+                        Component.literal(PLAYER_NAME),
+                        b -> createAndShowPlayerSubPanel()
+                )
+                .pos(buttonX, buttonY)
+                .size(BUTTON_WIDTH, BUTTON_HEIGHT)
+                .build();
+    }
+
+    /**
+     * Creates and displays a sub-panel with player-specific actions.
+     */
+    private static void createAndShowPlayerSubPanel() {
+        FloatingPanel subPanel = new FloatingPanel(
+                "Player-Name 1",
+                400, 100,
+                SUB_PANEL_WIDTH, SUB_PANEL_HEIGHT
+        );
+
+        // Add player action buttons
+        addPlayerActionButton(subPanel, "Inventory", "/view inv " + PLAYER_NAME, 0);
+        addPlayerActionButton(subPanel, "Ender Chest", "/view echest " + PLAYER_NAME, 1);
+        addPlayerActionButton(subPanel, "Backpack", "/view backpack " + PLAYER_NAME, 2);
+        addPlayerActionButton(subPanel, "Curios", "/view curios " + PLAYER_NAME, 3);
+        addPlayerActionButton(subPanel, "CuriosCosmetic", "/view curioscosmetic " + PLAYER_NAME, 4);
+
+        panels.add(subPanel);
+    }
+
+    /**
+     * Adds a player action button to the specified panel.
+     *
+     * @param panel The panel to add the button to
+     * @param buttonText The text to display on the button
+     * @param command The command to execute when clicked
+     * @param position The vertical position index (0-based)
+     */
+    private static void addPlayerActionButton(FloatingPanel panel, String buttonText, String command, int position) {
+        // Create button with relative position (relative to sub-panel origin)
+        int buttonX = (SUB_PANEL_WIDTH - BUTTON_WIDTH) / 2; // Centered horizontally within sub-panel
+        int buttonY = 25 + (position * BUTTON_SPACING); // Positioned vertically within sub-panel
+
+        Button button = Button.builder(
+                        Component.literal(buttonText),
+                        b -> Minecraft.getInstance().player.connection.sendCommand(command)
+                )
+                .pos(buttonX, buttonY)
+                .size(BUTTON_WIDTH, BUTTON_HEIGHT)
+                .build();
+
+        panel.addButton(button);
+    }
+
+
 
     public static void renderPanels(GuiGraphics graphics, int mouseX, int mouseY) {
         for (FloatingPanel panel : panels) {
@@ -61,22 +185,36 @@ public class PanelManager {
     }
 
     public static boolean mouseClicked(double mouseX, double mouseY, int button) {
-        for (FloatingPanel panel : panels) {
-            if (panel.mouseClicked(mouseX, mouseY, button)) return true;
+        // Process panels in reverse order so the topmost panel gets priority
+        for (int i = panels.size() - 1; i >= 0; i--) {
+            FloatingPanel panel = panels.get(i);
+            // Check if click is within panel bounds first
+            if (mouseX >= panel.x && mouseX <= panel.x + panel.width &&
+                    mouseY >= panel.y && mouseY <= panel.y + panel.height) {
+                if (panel.mouseClicked(mouseX, mouseY, button)) return true;
+            }
         }
         return false;
     }
 
     public static boolean mouseReleased(double mouseX, double mouseY, int button) {
-        for (FloatingPanel panel : panels) {
+        // Process panels in reverse order so the topmost panel gets priority
+        for (int i = panels.size() - 1; i >= 0; i--) {
+            FloatingPanel panel = panels.get(i);
             if (panel.mouseReleased(mouseX, mouseY, button)) return true;
         }
         return false;
     }
 
     public static boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
-        for (FloatingPanel panel : panels) {
-            if (panel.mouseDragged(mouseX, mouseY, button, dx, dy)) return true;
+        // Process panels in reverse order so the topmost panel gets priority
+        for (int i = panels.size() - 1; i >= 0; i--) {
+            FloatingPanel panel = panels.get(i);
+            // Only process drag if the panel is currently being dragged
+            if (panel.dragging || (mouseX >= panel.x && mouseX <= panel.x + panel.width &&
+                    mouseY >= panel.y && mouseY <= panel.y + panel.height)) {
+                if (panel.mouseDragged(mouseX, mouseY, button, dx, dy)) return true;
+            }
         }
         return false;
     }
